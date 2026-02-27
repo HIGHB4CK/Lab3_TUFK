@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+
+<VBox prefHeight="600.0" prefWidth="800.0"
+      xmlns="http://javafx.com/javafx/23.0.1"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="org.example.laba1_tfyk.HelloController">
+
+    <children>
+
+        <!-- ====== ГЛАВНОЕ МЕНЮ ====== -->
+        <MenuBar>
+
+            <menus>
+
+                <Menu text="Файл">
+                    <MenuItem text="Создать" onAction="#handleNew"/>
+                    <MenuItem text="Открыть" onAction="#handleOpen"/>
+                    <MenuItem text="Сохранить" onAction="#handleSave"/>
+                    <MenuItem text="Сохранить как" onAction="#handleSaveAs"/>
+                    <SeparatorMenuItem/>
+                    <MenuItem text="Выход" onAction="#handleExit"/>
+                </Menu>
+
+                <Menu text="Правка">
+                    <MenuItem text="Отменить" onAction="#handleUndo"/>
+                    <MenuItem text="Повторить" onAction="#handleRedo"/>
+                    <SeparatorMenuItem/>
+                    <MenuItem text="Вырезать" onAction="#handleCut"/>
+                    <MenuItem text="Копировать" onAction="#handleCopy"/>
+                    <MenuItem text="Вставить" onAction="#handlePaste"/>
+                    <MenuItem text="Удалить" onAction="#handleDelete"/>
+                    <SeparatorMenuItem/>
+                    <MenuItem text="Выделить все" onAction="#handleSelectAll"/>
+                    <MenuItem text="Увеличить шрифт" onAction="#increaseFont"/>
+                    <MenuItem text="Уменьшить шрифт" onAction="#decreaseFont"/>
+                </Menu>
+
+                <Menu text="Текст">
+                    <MenuItem text="Постановка задачи" onAction="#handleProblemStatement"/>
+                    <MenuItem text="Грамматика" onAction="#handleGrammar"/>
+                    <MenuItem text="Классификация грамматики" onAction="#handleGrammarClassification"/>
+                    <MenuItem text="Метод анализа" onAction="#handleAnalysisMethod"/>
+                    <MenuItem text="Тестовый пример" onAction="#handleTestExample"/>
+                    <MenuItem text="Список литературы" onAction="#handleLiteratureList"/>
+                    <MenuItem text="Исходный код программы" onAction="#handleListing"/>
+                </Menu>
+
+                <Menu text="Пуск">
+                    <MenuItem text="Запуск анализатора" onAction="#handleRun"/>
+                </Menu>
+
+                <Menu text="Справка">
+                    <MenuItem text="Вызов справки" onAction="#handleCallingHelp"/>
+                    <MenuItem text="О программе" onAction="#handleAbout"/>
+                </Menu>
+
+            </menus>
+        </MenuBar>
+
+        <!-- ====== ПАНЕЛЬ ИНСТРУМЕНТОВ ====== -->
+        <ToolBar>
+
+            <Button onAction="#handleNew">
+                <graphic>
+                    <ImageView fitHeight="20" fitWidth="20">
+                        <image>
+                            <Image url="@icons/create.ico"/>
+                        </image>
+                    </ImageView>
+                </graphic>
+            </Button>
+
+            <Button onAction="#handleOpen">
+                <graphic>
+                    <ImageView fitHeight="20" fitWidth="20">
+                        <image>
+                            <Image url="@icons/directory.ico"/>
+                        </image>
+                    </ImageView>
+                </graphic>
+            </Button>
+
+            <Button onAction="#handleSave">
+                <graphic>
+                    <ImageView fitHeight="20" fitWidth="20">
+                        <image>
+                            <Image url="@icons/save.ico"/>
+                        </image>
+                    </ImageView>
+                </graphic>
+            </Button>
+
+            <Separator/>
+
+            <Button onAction="#handleUndo">
+                <graphic>
+                    <ImageView fitHeight="20" fitWidth="20">
+                        <image>
+                            <Image url="@icons/back.ico"/>
+                        </image>
+                    </ImageView>
+                </graphic>
+            </Button>
+
+            <Button onAction="#handleRedo">
+                <graphic>
+                    <ImageView fitHeight="20" fitWidth="20">
+                        <image>
+                            <Image url="@icons/forward.ico"/>
+                        </image>
+                    </ImageView>
+                </graphic>
+            </Button>
+
+            <Separator/>
+
+            <Button onAction="#handleCopy">
+                <graphic>
+                    <ImageView fitHeight="20" fitWidth="20">
+                        <image>
+                            <Image url="@icons/copy.ico"/>
+                        </image>
+                    </ImageView>
+                </graphic>
+            </Button>
+
+            <Button onAction="#handleCut">
+                <graphic>
+                    <ImageView fitHeight="20" fitWidth="20">
+                        <image>
+                            <Image url="@icons/cut.ico"/>
+                        </image>
+                    </ImageView>
+                </graphic>
+            </Button>
+
+            <Button onAction="#handlePaste">
+                <graphic>
+                    <ImageView fitHeight="20" fitWidth="20">
+                        <image>
+                            <Image url="@icons/paste.ico"/>
+                        </image>
+                    </ImageView>
+                </graphic>
+            </Button>
+
+        </ToolBar>
+
+        <!-- ====== ОБЛАСТИ РЕДАКТИРОВАНИЯ И РЕЗУЛЬТАТОВ ====== -->
+        <SplitPane orientation="VERTICAL" VBox.vgrow="ALWAYS">
+
+            <items>
+
+                <!-- Редактор -->
+                <TextArea fx:id="textArea"
+                          wrapText="true"/>
+
+                <!-- Область результатов -->
+                <TextArea fx:id="textArea2"
+                          editable="false"
+                          wrapText="true"/>
+
+            </items>
+
+        </SplitPane>
+
+    </children>
+</VBox>

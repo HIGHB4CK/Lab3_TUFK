@@ -1,0 +1,351 @@
+package org.example.laba1_tfyk;
+
+import javafx.fxml.FXML;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.TextArea;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.StackPane;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Optional;
+
+public class HelloController {
+    // ====== ЭЛЕМЕНТЫ ИЗ FXML ======
+
+    @FXML
+    private AnchorPane anchorPane;
+
+    @FXML
+    private TextArea textArea;          // первая TextArea (редактор)
+
+    @FXML
+    private TextArea textArea2;         // вторая TextArea (вывод)
+
+    // ====== ВНУТРЕННИЕ ПОЛЯ ======
+
+    private File currentFile;
+    private double fontSize = 14;
+    private boolean isModified = false;
+
+    // ====== ИНИЦИАЛИЗАЦИЯ ======
+
+    @FXML
+    public void initialize() {
+
+        textArea2.setEditable(false);
+
+        textArea.textProperty().addListener((obs, oldText, newText) -> {
+            isModified = true;
+            updateTitle();
+        });
+
+        // Горячие клавиши
+        textArea.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null) {
+
+                newScene.getAccelerators().put(
+                        new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN),
+                        this::handleSave
+                );
+
+                newScene.getAccelerators().put(
+                        new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN),
+                        this::handleNew
+                );
+
+                newScene.getAccelerators().put(
+                        new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN),
+                        this::handleOpen
+                );
+            }
+        });
+    }
+
+    @FXML
+    private void increaseFont() {
+        fontSize += 2;
+        updateFont();
+    }
+
+    @FXML
+    private void decreaseFont() {
+        if (fontSize > 8) {
+            fontSize -= 2;
+            updateFont();
+        }
+    }
+
+    private void updateFont() {
+        textArea.setStyle("-fx-font-size: " + fontSize + "px;");
+        textArea2.setStyle("-fx-font-size: " + fontSize + "px;");
+    }
+
+    private void updateTitle() {
+        Stage stage = (Stage) textArea.getScene().getWindow();
+
+        String fileName = (currentFile == null)
+                ? "Без имени"
+                : currentFile.getName();
+
+        String modifiedMark = isModified ? " *" : "";
+
+        stage.setTitle("Текстовый редактор - " + fileName + modifiedMark);
+    }
+
+    // ================= SAVE CHECK =================
+
+    private boolean checkSaveBeforeAction() {
+
+        if (!isModified) return true;
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Несохранённые изменения");
+        alert.setHeaderText("Файл был изменён");
+        alert.setContentText("Сохранить изменения перед продолжением?");
+
+        ButtonType saveBtn = new ButtonType("Сохранить");
+        ButtonType dontSaveBtn = new ButtonType("Не сохранять");
+        ButtonType cancelBtn = new ButtonType("Отмена", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        alert.getButtonTypes().setAll(saveBtn, dontSaveBtn, cancelBtn);
+
+        Optional<ButtonType> result = alert.showAndWait();
+
+        if (result.isPresent()) {
+
+            if (result.get() == saveBtn) {
+                handleSave();
+                return !isModified; // если сохранение прошло успешно
+            }
+            else if (result.get() == dontSaveBtn) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // ====== МЕНЮ ФАЙЛ ======
+
+    @FXML
+    private void handleNew() {
+        if (!checkSaveBeforeAction()) return;
+
+        textArea.clear();
+        currentFile = null;
+        isModified = false;
+        updateTitle();
+        textArea2.appendText("Создан новый документ\n");
+    }
+
+    @FXML
+    private void handleOpen() {
+        if (!checkSaveBeforeAction()) return;
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Открыть файл");
+
+        File file = fileChooser.showOpenDialog(textArea.getScene().getWindow());
+
+        if (file != null) {
+            try {
+                textArea.setText(Files.readString(file.toPath()));
+                currentFile = file;
+                isModified = false;
+                updateTitle();
+                textArea2.appendText("Файл открыт: " + file.getName() + "\n");
+            } catch (IOException e) {
+                showInfo("Ошибка открытия файла");
+            }
+        }
+    }
+
+    @FXML
+    public void handleSave() {
+        try {
+            if (currentFile == null) {
+                handleSaveAs();
+                return;
+            }
+
+            Files.writeString(currentFile.toPath(), textArea.getText());
+            textArea2.setText("Файл сохранён");
+        } catch (Exception e) {
+            textArea2.setText("Ошибка сохранения");
+        }
+    }
+
+    @FXML
+    private void handleSaveAs() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Сохранить файл");
+
+        File file = fileChooser.showSaveDialog(textArea.getScene().getWindow());
+
+        if (file != null) {
+            saveToFile(file);
+        }
+    }
+
+    private void saveToFile(File file) {
+        try {
+            Files.writeString(file.toPath(), textArea.getText());
+            currentFile = file;
+            isModified = false;
+            updateTitle();
+            textArea2.appendText("Файл сохранён: " + file.getName() + "\n");
+        } catch (IOException e) {
+            showInfo("Ошибка сохранения файла");
+        }
+    }
+
+    @FXML
+    public void handleExit() {
+        System.exit(0);
+    }
+
+    // ====== МЕНЮ ПРАВКА ======
+
+    @FXML
+    public void handleUndo() {
+        textArea.undo();
+    }
+
+    @FXML
+    public void handleRedo() {
+        textArea.redo();
+    }
+
+    @FXML
+    public void handleCut() {
+        textArea.cut();
+    }
+
+    @FXML
+    public void handleCopy() {
+        textArea.copy();
+    }
+
+    @FXML
+    public void handlePaste() {
+        textArea.paste();
+    }
+
+    @FXML
+    public void handleDelete() {
+        textArea.replaceSelection("");
+    }
+
+    @FXML
+    public void handleSelectAll() {
+        textArea.selectAll();
+    }
+
+    // ====== МЕНЮ ТЕКСТ (пока просто информационные окна) ======
+
+    @FXML
+    public void handleProblemStatement() {
+        showInfo("Постановка задачи");
+    }
+
+    @FXML
+    public void handleGrammar() {
+        showInfo("Грамматика");
+    }
+
+    @FXML
+    public void handleGrammarClassification() {
+        showInfo("Классификация грамматики");
+    }
+
+    @FXML
+    public void handleAnalysisMethod() {
+        showInfo("Метод анализа");
+    }
+
+    @FXML
+    public void handleTestExample() {
+        showInfo("Тестовый пример");
+    }
+
+    @FXML
+    public void handleLiteratureList() {
+        showInfo("Список литературы");
+    }
+
+    @FXML
+    public void handleListing() {
+        showInfo("Исходный код программы");
+    }
+
+    @FXML
+    public void handleRun() { showInfo("Запуск программы."); }
+
+    // ====== СПРАВКА ======
+
+    @FXML
+    private void handleCallingHelp() {
+
+        Stage helpStage = new Stage();
+        helpStage.setTitle("Справка");
+
+        TextArea helpText = new TextArea();
+        helpText.setEditable(false);
+        helpText.setWrapText(true);
+
+        helpText.setText("""
+            СПРАВОЧНАЯ СИСТЕМА
+            
+            Создать – создаёт новый документ.
+            Открыть – открывает существующий файл.
+            Сохранить – сохраняет текущий файл.
+            Сохранить как – сохраняет файл под новым именем.
+            Выход – закрывает программу с предложением сохранить изменения.
+            
+            Отменить – отменяет последнее действие.
+            Повторить – повторяет отменённое действие.
+            Вырезать – удаляет выделенный текст и помещает в буфер.
+            Копировать – копирует выделенный текст.
+            Вставить – вставляет текст из буфера.
+            Удалить – удаляет выделенный фрагмент.
+            Выделить все – выделяет весь текст.
+            
+            Содержит быстрый доступ к основным командам:
+            создать, открыть, сохранить, undo/redo, копировать, вырезать, вставить.
+            
+            Верхняя область – редактирование текста.
+            Нижняя область – вывод сообщений программы.
+            
+            Программа автоматически предлагает сохранить изменения
+            при выходе или открытии нового файла.
+            """);
+
+        Scene scene = new Scene(new StackPane(helpText), 500, 400);
+        helpStage.setScene(scene);
+        helpStage.show();
+    }
+
+    @FXML
+    public void handleAbout() {
+        showInfo("Text Editor\nВерсия 1.0");
+    }
+
+    // ====== ВСПОМОГАТЕЛЬНЫЙ МЕТОД ======
+
+    private void showInfo(String text) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setHeaderText(null);
+        alert.setContentText(text);
+        alert.showAndWait();
+    }
+}
