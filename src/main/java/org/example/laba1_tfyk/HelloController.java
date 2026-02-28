@@ -20,24 +20,16 @@ import java.nio.file.Files;
 import java.util.Optional;
 
 public class HelloController {
-    // ====== ЭЛЕМЕНТЫ ИЗ FXML ======
 
     @FXML
-    private AnchorPane anchorPane;
+    private TextArea textArea;
 
     @FXML
-    private TextArea textArea;          // первая TextArea (редактор)
-
-    @FXML
-    private TextArea textArea2;         // вторая TextArea (вывод)
-
-    // ====== ВНУТРЕННИЕ ПОЛЯ ======
+    private TextArea textArea2;
 
     private File currentFile;
     private double fontSize = 14;
     private boolean isModified = false;
-
-    // ====== ИНИЦИАЛИЗАЦИЯ ======
 
     @FXML
     public void initialize() {
@@ -49,9 +41,16 @@ public class HelloController {
             updateTitle();
         });
 
-        // Горячие клавиши
         textArea.sceneProperty().addListener((obs, oldScene, newScene) -> {
             if (newScene != null) {
+
+                Stage stage = (Stage) newScene.getWindow();
+
+                stage.setOnCloseRequest(event -> {
+                    if (!checkSaveBeforeAction()) {
+                        event.consume(); // отменяет закрытие
+                    }
+                });
 
                 newScene.getAccelerators().put(
                         new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN),
@@ -102,8 +101,6 @@ public class HelloController {
         stage.setTitle("Текстовый редактор - " + fileName + modifiedMark);
     }
 
-    // ================= SAVE CHECK =================
-
     private boolean checkSaveBeforeAction() {
 
         if (!isModified) return true;
@@ -125,7 +122,7 @@ public class HelloController {
 
             if (result.get() == saveBtn) {
                 handleSave();
-                return !isModified; // если сохранение прошло успешно
+                return !isModified;
             }
             else if (result.get() == dontSaveBtn) {
                 return true;
@@ -135,7 +132,6 @@ public class HelloController {
         return false;
     }
 
-    // ====== МЕНЮ ФАЙЛ ======
 
     @FXML
     private void handleNew() {
@@ -211,10 +207,11 @@ public class HelloController {
 
     @FXML
     public void handleExit() {
-        System.exit(0);
-    }
+        if (!checkSaveBeforeAction()) return;
 
-    // ====== МЕНЮ ПРАВКА ======
+        Stage stage = (Stage) textArea.getScene().getWindow();
+        stage.close();
+    }
 
     @FXML
     public void handleUndo() {
@@ -250,8 +247,6 @@ public class HelloController {
     public void handleSelectAll() {
         textArea.selectAll();
     }
-
-    // ====== МЕНЮ ТЕКСТ (пока просто информационные окна) ======
 
     @FXML
     public void handleProblemStatement() {
@@ -290,8 +285,6 @@ public class HelloController {
 
     @FXML
     public void handleRun() { showInfo("Запуск программы."); }
-
-    // ====== СПРАВКА ======
 
     @FXML
     private void handleCallingHelp() {
@@ -339,8 +332,6 @@ public class HelloController {
     public void handleAbout() {
         showInfo("Text Editor\nВерсия 1.0");
     }
-
-    // ====== ВСПОМОГАТЕЛЬНЫЙ МЕТОД ======
 
     private void showInfo(String text) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);

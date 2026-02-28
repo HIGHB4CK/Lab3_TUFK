@@ -12,7 +12,7 @@ public class HelloApplication extends Application {
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("InterfaceLab1.fxml"));
         Scene scene = new Scene(fxmlLoader.load(), 800, 600);
-        stage.setTitle("Антонянц Егор Николаевич");
+        stage.setTitle("Compiler");
         stage.setScene(scene);
         stage.show();
     }
