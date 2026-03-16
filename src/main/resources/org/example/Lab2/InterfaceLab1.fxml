@@ -153,9 +153,29 @@
                 <TextArea fx:id="textArea"
                           wrapText="true"/>
 
-                <TextArea fx:id="textArea2"
-                          editable="false"
-                          wrapText="true"/>
+                <TabPane tabClosingPolicy="UNAVAILABLE">
+                    <tabs>
+                        <Tab text="Результаты">
+                            <content>
+                                <TableView fx:id="resultTable">
+                                    <columns>
+                                        <TableColumn fx:id="codeCol" text="Код" prefWidth="50" style="-fx-alignment: CENTER;" />
+                                        <TableColumn fx:id="typeCol" text="Тип" prefWidth="250" />
+                                        <TableColumn fx:id="lexemeCol" text="Лексема" prefWidth="200" />
+                                        <TableColumn fx:id="locationCol" text="Местоположение" prefWidth="150" style="-fx-alignment: CENTER;" />
+                                    </columns>
+                                </TableView>
+                            </content>
+                        </Tab>
+                        <Tab text="Сообщения">
+                            <content>
+                                <TextArea fx:id="textArea2"
+                                          editable="false"
+                                          wrapText="true"/>
+                            </content>
+                        </Tab>
+                    </tabs>
+                </TabPane>
 
             </items>
 

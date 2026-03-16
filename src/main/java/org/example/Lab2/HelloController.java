@@ -1,11 +1,16 @@
 package org.example.laba1TFLK;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
@@ -16,6 +21,7 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.Optional;
 
 public class HelloController {
@@ -26,6 +32,23 @@ public class HelloController {
     @FXML
     private TextArea textArea2;
 
+    @FXML
+    private TableView<Token> resultTable;
+
+    @FXML
+    private TableColumn<Token, Integer> codeCol;
+
+    @FXML
+    private TableColumn<Token, String> typeCol;
+
+    @FXML
+    private TableColumn<Token, String> lexemeCol;
+
+    @FXML
+    private TableColumn<Token, String> locationCol;
+
+    private ObservableList<Token> tokenData = FXCollections.observableArrayList();
+
     private File currentFile;
     private double fontSize = 14;
     private boolean isModified = false;
@@ -34,6 +57,23 @@ public class HelloController {
     public void initialize() {
 
         textArea2.setEditable(false);
+
+        // Инициализация таблицы
+        codeCol.setCellValueFactory(new PropertyValueFactory<>("code"));
+        typeCol.setCellValueFactory(new PropertyValueFactory<>("type"));
+        lexemeCol.setCellValueFactory(new PropertyValueFactory<>("text"));
+        locationCol.setCellValueFactory(new PropertyValueFactory<>("location"));
+        
+        resultTable.setItems(tokenData);
+
+        // Обработчик выбора строки таблицы для навигации к ошибке
+        resultTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> {
+            if (newSel != null && newSel.getCode() == 17) {
+                // Если это ошибка, перемещаем курсор и выделяем текст
+                textArea.requestFocus();
+                textArea.selectRange(newSel.getGlobalStart(), newSel.getGlobalEnd());
+            }
+        });
 
         textArea.textProperty().addListener((obs, oldText, newText) -> {
             isModified = true;
@@ -283,7 +323,27 @@ public class HelloController {
     }
 
     @FXML
-    public void handleRun() { showInfo("Запуск программы."); }
+    public void handleRun() { 
+        String text = textArea.getText();
+        if (text == null || text.isEmpty()) {
+            textArea2.setText("Текст для анализа отсутствует.");
+            tokenData.clear();
+            return;
+        }
+
+        List<Token> tokens = Scanner.analyze(text);
+        tokenData.clear();
+        tokenData.addAll(tokens);
+
+        long errorCount = tokens.stream().filter(t -> t.getCode() == 17).count();
+
+        if (errorCount > 0) {
+            textArea2.setText("Лексический анализ завершен. Найдены ошибки: " + errorCount + ".");
+            showInfo("Анализ завершен с ошибками. Проверьте сообщения и таблицу.");
+        } else {
+            textArea2.setText("Лексический анализ успешно завершен. Ошибок не обнаружено.");
+        }
+    }
 
     @FXML
     private void handleCallingHelp() {
