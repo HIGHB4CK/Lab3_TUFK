@@ -8,7 +8,7 @@
 <VBox prefHeight="600.0" prefWidth="800.0"
       xmlns="http://javafx.com/javafx/23.0.1"
       xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="org.example.laba1TFLK.HelloController">
+      fx:controller="org.example.Lab2.HelloController">
 
     <children>
         <MenuBar>

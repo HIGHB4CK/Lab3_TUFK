@@ -1,4 +1,4 @@
-package org.example.laba1TFLK;
+package org.example.Lab2;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;

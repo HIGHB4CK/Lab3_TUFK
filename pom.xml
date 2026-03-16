@@ -70,10 +70,9 @@
                 <version>0.0.8</version>
                 <executions>
                     <execution>
-                        <!-- Default configuration for running with: mvn clean javafx:run -->
                         <id>default-cli</id>
                         <configuration>
-                            <mainClass>org.example.laba1TFLK/org.example.laba1TFLK.HelloApplication</mainClass>
+                            <mainClass>org.example.laba1TFLK/org.example.Lab2.HelloApplication</mainClass>
                             <launcher>app</launcher>
                             <jlinkZipName>app</jlinkZipName>
                             <jlinkImageName>app</jlinkImageName>
@@ -116,7 +115,7 @@
 
                 <destination>target/dist</destination>
 
-                <module>org.example.laba1TFLK/org.example.laba1TFLK.HelloApplication</module>
+                <module>org.example.Lab2/org.example.Lab2.HelloApplication</module>
                 <modulePaths>
                     <modulePath>target/classes</modulePath>
                     <modulePath>target/dependencies</modulePath>
