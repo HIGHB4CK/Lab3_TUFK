@@ -14,19 +14,51 @@ public class Parser {
 
     public Parser(List<Token> allTokens) {
         this.tokens = new ArrayList<>();
+        this.errors = new ArrayList<>();
         for (Token t : allTokens) {
-            if (t.getCode() != 11 && !t.getType().startsWith("ошибка")) {
+            if (t.getType().startsWith("ошибка")) {
+                this.errors.add(new SyntaxError(t.getText(), t.getLocation(), "Лексическая ошибка: " + t.getType(), t.getGlobalStart(), t.getGlobalEnd()));
+            } else if (t.getCode() != 11) {
                 this.tokens.add(t);
             }
         }
         this.pos = 0;
-        this.errors = new ArrayList<>();
     }
 
     public static List<SyntaxError> parse(List<Token> tokens) {
         Parser parser = new Parser(tokens);
         parser.parseZ();
-        return parser.errors;
+        
+        List<SyntaxError> mergedErrors = new ArrayList<>();
+        if (!parser.errors.isEmpty()) {
+            SyntaxError prev = parser.errors.get(0);
+            for (int i = 1; i < parser.errors.size(); i++) {
+                SyntaxError curr = parser.errors.get(i);
+                
+                boolean hasTokensBetween = false;
+                for (Token t : parser.tokens) {
+                    if (t.getGlobalStart() > prev.getGlobalEnd() && t.getGlobalEnd() < curr.getGlobalStart()) {
+                        hasTokensBetween = true;
+                        break;
+                    }
+                }
+                
+                if (!hasTokensBetween && prev.getDescription().equals(curr.getDescription())) {
+                    String newFragment;
+                    if (prev.getGlobalEnd() >= curr.getGlobalStart() - 1) {
+                        newFragment = prev.getFragment() + curr.getFragment();
+                    } else {
+                        newFragment = prev.getFragment() + " " + curr.getFragment();
+                    }
+                    prev = new SyntaxError(newFragment, prev.getLocation(), prev.getDescription(), prev.getGlobalStart(), curr.getGlobalEnd());
+                } else {
+                    mergedErrors.add(prev);
+                    prev = curr;
+                }
+            }
+            mergedErrors.add(prev);
+        }
+        return mergedErrors;
     }
 
     private void addError(String description) {
@@ -46,12 +78,26 @@ public class Parser {
         followSet.add(";");
         followSet.add("}");
         
-        while (!isEOF()) {
-            Token c = current();
-            if (followSet.contains(c.getText())) {
+        int tempPos = pos;
+        boolean foundSync = false;
+        while (tempPos < tokens.size()) {
+            if (followSet.contains(tokens.get(tempPos).getText())) {
+                foundSync = true;
                 break;
             }
-            advance();
+            tempPos++;
+        }
+
+        if (foundSync) {
+            while (!isEOF()) {
+                Token c = current();
+                if (followSet.contains(c.getText())) {
+                    break;
+                }
+                advance();
+            }
+        } else {
+            if (!isEOF()) advance();
         }
     }
 
@@ -93,8 +139,14 @@ public class Parser {
     private void parseZ() {
         if (isEOF()) return;
 
+        Token c = current();
+        if (c != null && c.getText().equals(";")) {
+             addError("Ожидалось лямбда-выражение (левая часть, =, и само выражение)");
+             advance();
+             return;
+        }
+
         boolean hasAssignment = false;
-        
         int tempPos = pos;
         while (tempPos < tokens.size()) {
              if (tokens.get(tempPos).getText().equals("->")) {
@@ -111,7 +163,7 @@ public class Parser {
         }
 
         if (hasAssignment) {
-            Token c = current();
+            c = current();
             if (c != null && (c.getCode() == 14 || c.getText().equals("const"))) { 
                 advance();
                 matchType(2, "идентификатор", "=");
@@ -125,15 +177,33 @@ public class Parser {
                 recover("=");
             }
             match("=", "->", "(");
+        } else {
+            addError("Ожидалось присваивание переменной (отсутствует знак '=')");
         }
         
-        parseLambda();
+        c = current();
+        if (c == null || c.getText().equals(";")) {
+            if (hasAssignment) {
+                addError("Ожидалось лямбда-выражение");
+            }
+        } else {
+            parseLambda();
+        }
+        
+        if (!isEOF() && !current().getText().equals(";")) {
+             while(!isEOF() && !current().getText().equals(";")) {
+                 addError("Ожидался конец выражения, найдены лишние символы");
+                 advance();
+             }
+        }
         
         match(";", "EOF");
         
         if (!isEOF()) {
-             addError("Ожидался конец выражения, найдены лишние символы");
-             while(!isEOF()) advance();
+             while(!isEOF()) {
+                 addError("Ожидался конец выражения, найдены лишние символы");
+                 advance();
+             }
         }
     }
 
@@ -145,7 +215,10 @@ public class Parser {
 
     private void parseParams(String... follow) {
         Token c = current();
-        if (c == null) return;
+        if (c == null) {
+            addError("Ожидались параметры лямбда-выражения");
+            return;
+        }
         
         if (c.getText().equals("(")) {
             advance();
@@ -196,12 +269,17 @@ public class Parser {
 
     private void parseBody(String... follow) {
         Token c = current();
-        if (c == null) return;
+        if (c == null) {
+            addError("Ожидалось тело лямбда-выражения");
+            return;
+        }
 
         if (c.getText().equals("{")) {
             advance();
             parseStmtList("}");
             match("}", follow);
+        } else if (c.getText().equals(";")) {
+            addError("Ожидалось тело лямбда-выражения");
         } else {
             parseExpr(";", "EOF");
         }
@@ -240,7 +318,9 @@ public class Parser {
     }
 
     private void parseExpr(String... follow) {
-        parseTerm("+", "-", "*", "/", "=", ";", ")", "}", ",");
+        List<String> termFollows = new ArrayList<>(Arrays.asList("+", "-", "*", "/", "="));
+        termFollows.addAll(Arrays.asList(follow));
+        parseTerm(termFollows.toArray(new String[0]));
         parseExprTail(follow);
     }
 
@@ -249,7 +329,9 @@ public class Parser {
             Token c = current();
             if (c != null && isOp(c.getText())) {
                 advance();
-                parseTerm("+", "-", "*", "/", "=", ";", ")", "}", ",");
+                List<String> termFollows = new ArrayList<>(Arrays.asList("+", "-", "*", "/", "="));
+                termFollows.addAll(Arrays.asList(follow));
+                parseTerm(termFollows.toArray(new String[0]));
             } else {
                 break;
             }
@@ -262,7 +344,10 @@ public class Parser {
 
     private void parseTerm(String... follow) {
         Token c = current();
-        if (c == null) return;
+        if (c == null) {
+            addError("Ожидался операнд (идентификатор, число, строка или выражение в скобках)");
+            return;
+        }
 
         if (c.getCode() == 2) {
             advance();

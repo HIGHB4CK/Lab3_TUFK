@@ -157,9 +157,17 @@ public class Scanner {
 
             int startPos = col;
             int startGlobal = pos;
-            tokens.add(new Token(17, "ошибка (недопустимый символ)", String.valueOf(c), line, startPos, col, startGlobal, pos));
-            pos++;
-            col++;
+            StringBuilder err = new StringBuilder();
+            while (pos < len) {
+                char check = text.charAt(pos);
+                if (Character.isWhitespace(check) || Character.isLetterOrDigit(check) || check == '_' || check == '$' || "-+*/=(){},;.\"\'".indexOf(check) != -1) {
+                    break;
+                }
+                err.append(check);
+                pos++;
+                col++;
+            }
+            tokens.add(new Token(17, "ошибка (недопустимые символы)", err.toString(), line, startPos, col - 1, startGlobal, pos - 1));
         }
 
         return tokens;
