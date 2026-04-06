@@ -8,7 +8,7 @@ public class Scanner {
 
     private static final Set<String> KEYWORDS = Set.of(
             "int", "double", "float", "boolean", "char", "byte", "short", "long",
-            "var", "void", "return", "String", "new"
+            "var", "void", "return", "String", "new", "const"
     );
 
     public static List<Token> analyze(String text) {
@@ -21,7 +21,6 @@ public class Scanner {
         while (pos < len) {
             char c = text.charAt(pos);
 
-            // Обработка пробелов и переносов строк
             if (Character.isWhitespace(c)) {
                 int startPos = col;
                 int startGlobal = pos;
@@ -41,7 +40,6 @@ public class Scanner {
                 continue;
             }
 
-            // Идентификаторы и ключевые слова
             if (Character.isLetter(c) || c == '_' || c == '$') {
                 int startPos = col;
                 int startGlobal = pos;
@@ -60,7 +58,6 @@ public class Scanner {
                 continue;
             }
 
-            // Числа
             if (Character.isDigit(c)) {
                 int startPos = col;
                 int startGlobal = pos;
@@ -70,12 +67,24 @@ public class Scanner {
                     pos++;
                     col++;
                 }
-                tokens.add(new Token(1, "целое число", num.toString(), line, startPos, col - 1, startGlobal, pos - 1));
+
+                if (pos < len && text.charAt(pos) == '.') {
+                    num.append('.');
+                    pos++;
+                    col++;
+                    while (pos < len && Character.isDigit(text.charAt(pos))) {
+                        num.append(text.charAt(pos));
+                        pos++;
+                        col++;
+                    }
+                    tokens.add(new Token(6, "вещественное число", num.toString(), line, startPos, col - 1, startGlobal, pos - 1));
+                } else {
+                    tokens.add(new Token(1, "целое число", num.toString(), line, startPos, col - 1, startGlobal, pos - 1));
+                }
                 continue;
             }
 
-            // Операторы и лямбда стрелка ->
-            if ("-+*/=<>!&|".indexOf(c) != -1) {
+            if ("-+*/=".indexOf(c) != -1) {
                 int startPos = col;
                 int startGlobal = pos;
                 StringBuilder op = new StringBuilder();
@@ -85,15 +94,9 @@ public class Scanner {
 
                 if (pos < len) {
                     char nextC = text.charAt(pos);
-                    if ((c == '-' && nextC == '>') || // ->
-                        (c == '=' && nextC == '=') || // ==
-                        (c == '!' && nextC == '=') || // !=
-                        (c == '<' && nextC == '=') || // <=
-                        (c == '>' && nextC == '=') || // >=
-                        (c == '+' && nextC == '+') || // ++
-                        (c == '-' && nextC == '-') || // --
-                        (c == '&' && nextC == '&') || // &&
-                        (c == '|' && nextC == '|')) { // ||
+                    if ((c == '-' && nextC == '>') || 
+                            (c == '+' && nextC == '+') || 
+                            (c == '-' && nextC == '-')) { 
                         op.append(nextC);
                         pos++;
                         col++;
@@ -109,7 +112,6 @@ public class Scanner {
                 continue;
             }
 
-            // Разделители (скобки, запятые, точки с запятой)
             if ("(){},;.".indexOf(c) != -1) {
                 int startPos = col;
                 int startGlobal = pos;
@@ -121,7 +123,6 @@ public class Scanner {
                 continue;
             }
 
-            // Строковые литералы
             if (c == '"' || c == '\'') {
                 int startPos = col;
                 int startGlobal = pos;
@@ -145,7 +146,7 @@ public class Scanner {
                         col = 1;
                     }
                 }
-                
+
                 if (closed) {
                     tokens.add(new Token(5, "строковый литерал", str.toString(), line, startPos, col - 1, startGlobal, pos - 1));
                 } else {
@@ -154,12 +155,19 @@ public class Scanner {
                 continue;
             }
 
-            // Ошибка: недопустимый символ
             int startPos = col;
             int startGlobal = pos;
-            tokens.add(new Token(17, "ошибка (недопустимый символ)", String.valueOf(c), line, startPos, col, startGlobal, pos));
-            pos++;
-            col++;
+            StringBuilder err = new StringBuilder();
+            while (pos < len) {
+                char check = text.charAt(pos);
+                if (Character.isWhitespace(check) || Character.isLetterOrDigit(check) || check == '_' || check == '$' || "-+*/=(){},;.\"\'".indexOf(check) != -1) {
+                    break;
+                }
+                err.append(check);
+                pos++;
+                col++;
+            }
+            tokens.add(new Token(17, "ошибка (недопустимые символы)", err.toString(), line, startPos, col - 1, startGlobal, pos - 1));
         }
 
         return tokens;

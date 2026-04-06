@@ -47,7 +47,20 @@ public class HelloController {
     @FXML
     private TableColumn<Token, String> locationCol;
 
+    @FXML
+    private TableView<SyntaxError> syntaxErrorTable;
+
+    @FXML
+    private TableColumn<SyntaxError, String> errorFragmentCol;
+
+    @FXML
+    private TableColumn<SyntaxError, String> errorLocationCol;
+
+    @FXML
+    private TableColumn<SyntaxError, String> errorDescCol;
+
     private ObservableList<Token> tokenData = FXCollections.observableArrayList();
+    private ObservableList<SyntaxError> syntaxErrorData = FXCollections.observableArrayList();
 
     private File currentFile;
     private double fontSize = 14;
@@ -57,8 +70,6 @@ public class HelloController {
     public void initialize() {
 
         textArea2.setEditable(false);
-
-        // Инициализация таблицы
         codeCol.setCellValueFactory(new PropertyValueFactory<>("code"));
         typeCol.setCellValueFactory(new PropertyValueFactory<>("type"));
         lexemeCol.setCellValueFactory(new PropertyValueFactory<>("text"));
@@ -66,10 +77,20 @@ public class HelloController {
         
         resultTable.setItems(tokenData);
 
-        // Обработчик выбора строки таблицы для навигации к ошибке
         resultTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> {
             if (newSel != null && newSel.getCode() == 17) {
-                // Если это ошибка, перемещаем курсор и выделяем текст
+                textArea.requestFocus();
+                textArea.selectRange(newSel.getGlobalStart(), newSel.getGlobalEnd());
+            }
+        });
+        errorFragmentCol.setCellValueFactory(new PropertyValueFactory<>("fragment"));
+        errorLocationCol.setCellValueFactory(new PropertyValueFactory<>("location"));
+        errorDescCol.setCellValueFactory(new PropertyValueFactory<>("description"));
+        
+        syntaxErrorTable.setItems(syntaxErrorData);
+
+        syntaxErrorTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> {
+            if (newSel != null) {
                 textArea.requestFocus();
                 textArea.selectRange(newSel.getGlobalStart(), newSel.getGlobalEnd());
             }
@@ -87,7 +108,7 @@ public class HelloController {
 
                 stage.setOnCloseRequest(event -> {
                     if (!checkSaveBeforeAction()) {
-                        event.consume(); // отменяет закрытие
+                        event.consume();
                     }
                 });
 
@@ -328,6 +349,7 @@ public class HelloController {
         if (text == null || text.isEmpty()) {
             textArea2.setText("Текст для анализа отсутствует.");
             tokenData.clear();
+            syntaxErrorData.clear();
             return;
         }
 
@@ -337,11 +359,17 @@ public class HelloController {
 
         long errorCount = tokens.stream().filter(t -> t.getCode() == 17).count();
 
-        if (errorCount > 0) {
-            textArea2.setText("Лексический анализ завершен. Найдены ошибки: " + errorCount + ".");
-            showInfo("Анализ завершен с ошибками. Проверьте сообщения и таблицу.");
+        List<SyntaxError> syntaxErrors = Parser.parse(tokens);
+        syntaxErrorData.clear();
+        syntaxErrorData.addAll(syntaxErrors);
+
+        int syntaxErrorCount = syntaxErrors.size();
+
+        if (errorCount > 0 || syntaxErrorCount > 0) {
+            textArea2.setText("Анализ завершен. Лексических ошибок: " + errorCount + ", синтаксических ошибок: " + syntaxErrorCount + ".");
+            showInfo("Анализ завершен с ошибками. Проверьте сообщения и таблицы.");
         } else {
-            textArea2.setText("Лексический анализ успешно завершен. Ошибок не обнаружено.");
+            textArea2.setText("Анализ успешно завершен. Ошибок не обнаружено.");
         }
     }
 

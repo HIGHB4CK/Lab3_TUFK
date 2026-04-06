@@ -34,7 +34,7 @@ public class Token {
     }
     
     public String getLocation() {
-        return "строка " + line + ", " + startCol + "-" + endCol;
+        return "строка " + line + ", позиция " + startCol;
     }
 
     public int getLine() {

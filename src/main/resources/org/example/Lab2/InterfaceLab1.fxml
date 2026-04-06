@@ -167,6 +167,17 @@
                                 </TableView>
                             </content>
                         </Tab>
+                        <Tab text="Синтаксические ошибки">
+                            <content>
+                                <TableView fx:id="syntaxErrorTable">
+                                    <columns>
+                                        <TableColumn fx:id="errorFragmentCol" text="Неверный фрагмент" prefWidth="200" />
+                                        <TableColumn fx:id="errorLocationCol" text="Местоположение" prefWidth="150" style="-fx-alignment: CENTER;" />
+                                        <TableColumn fx:id="errorDescCol" text="Описание" prefWidth="300" />
+                                    </columns>
+                                </TableView>
+                            </content>
+                        </Tab>
                         <Tab text="Сообщения">
                             <content>
                                 <TextArea fx:id="textArea2"
