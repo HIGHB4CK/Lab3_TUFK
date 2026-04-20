@@ -51,8 +51,8 @@
 
 **Полное определение грамматики:**
 ```text
-Z -> LVal = Lambda
-LVal -> Type ID | ID
+Z -> LVal = Lambda ; | Lambda ;
+LVal -> Type ID | ID ID | ID
 Lambda -> Params -> Body
 
 Params -> ( ParamList ) | () | ID
