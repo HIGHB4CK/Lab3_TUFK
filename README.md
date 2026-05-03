@@ -31,9 +31,9 @@
 **Тема:** Лямбда-выражения языка Java.
 
 **Примеры корректных входных строк:**
-1. `Function op = (int x, int y) -> { return x + y; };` (С полным определением типов и блоком тела)
-2. `Function mult = x -> x * 2;` (Присваивание, один параметр без скобок, выражение в теле)
-3. `var obj = () -> System.out.println("Hello");` (Присваивание, без параметров, с вызовом метода)
+1. `Function op = (int x, int y) ->  x + y;` (Присваивание, полное определение параметров, арифметическое выражение)
+2. `mult = x -> x * 2;` (Присваивание в существующую переменную, один параметр без скобок)
+3. `() -> (10 + 5) / 2;` (Без параметров, арифметическое выражение со скобками)
 
 **Перечень допустимых лексем:**
 * **Ключевые слова:** `int`, `double`, `float`, `boolean`, `char`, `byte`, `short`, `long`, `var`, `void`, `return`, `String`, `new`, `const`
@@ -42,7 +42,7 @@
 * **Строковые литералы:** Ограничены двойными или одинарными кавычками (`"text"`, `'text'`)
 * **Лямбда-оператор:** `->`
 * **Операторы:** `+`, `-`, `*`, `/`, `=`, `++`, `--`
-* **Разделители:** `(`, `)`, `{`, `}`, `,`, `.`, `;`
+* **Разделители:** `(`, `)`, `,`, `.`, `;`
 
 ---
 
@@ -51,42 +51,41 @@
 
 **Полное определение грамматики:**
 ```text
-1.	<Z> -> <LVal> = <Lambda> ; | <Lambda> ;
-2.	<LVal> -> <Type> <Identifier> | <Identifier> <Identifier> | <Identifier>
-3.	<Lambda> -> <Params> -> <Body>
-4.	<Params> -> ( <ParamList> ) | ( ) | <Identifier>
-5.	<ParamList> -> <Param> <ParamListTail>
-6.	<ParamListTail> -> , <Param> <ParamListTail> | ε
-7.	<Param> -> <Type> <Identifier> | <Identifier>
-8.	<Body> -> { <StmtList> } | <Expr>
-9.	<StmtList> -> <Stmt> <StmtList> | ε
-10.	<Stmt> -> return <Expr> ; | <Expr> ; | <Type> <Identifier> = <Expr> ;
-11.	<Expr> -> <Term> <ExprTail>
-12.	<ExprTail> -> <Op> <Term> <ExprTail> | ε
-13.	<Op> -> + | - | * | / | = | ++ | --
-14.	<Term> -> <Identifier> | <Number> | <String> | ( <Expr> ) | <MethodCall>
-15.	<MethodCall> -> <Identifier> . <Identifier> ( <Args> )
-16.	<Args> -> <Expr> <ArgsTail> | ε
-17.	<ArgsTail> -> , <Expr> <ArgsTail> | ε
-18.	<Type> -> int | double | float | boolean | char | byte | short | long | var | void | String | const | new
-19.	<Identifier> -> letter <IdentifierRem> | _ <IdentifierRem> | $ <IdentifierRem>
-20.	<IdentifierRem> -> letter <IdentifierRem> | digit <IdentifierRem> | _ <IdentifierRem> | $ <IdentifierRem> | ε
-21.	<Number> -> <Integer> <Fraction>
-22.	<Integer> -> digit <IntegerTail>
-23.	<IntegerTail> -> digit <IntegerTail> | ε
-24.	<Fraction> -> . <Integer> | ε
-25.	<String> -> " any_chars " | ' any_chars '
+1. <Z> -> <LVal> '=' <Lambda> ';' | <Lambda> ';'
+2. <LVal> -> <Type> <Identifier> | <Identifier> <Identifier> | <Identifier>
+3. <Lambda> -> <Params> '->' <Expr>
+4. <Params> -> '(' <ParamList> ')' | '(' ')' | <Identifier>
+5. <ParamList> -> <Param> <ParamListTail>
+6. <ParamListTail> -> ',' <Param> <ParamListTail> | ε
+7. <Param> -> <Type> <Identifier> | <Identifier>
+8. <Expr> -> <Term> <ExprTail>
+9. <ExprTail> -> <Op> <Term> <ExprTail> | ε
+10. <Op> -> '+' | '-' | '*' | '/'
+11. <Term> -> <Identifier> | <Number> | '(' <Expr> ')'
+12. <Type> -> 'int' | 'double' | 'float' | 'boolean' | 'char' | 'byte' | 'short' | 'long' | 'var' | 'void' | 'String' | 'const'
+13. <Identifier> -> letter <IdentifierRem> | '_' <IdentifierRem> | '$' <IdentifierRem>
+14. <IdentifierRem> -> letter <IdentifierRem> | digit <IdentifierRem> | '_' <IdentifierRem> | '$' <IdentifierRem> | ε
+15. <Number> -> <Integer> <Fraction>
+16. <Integer> -> digit <IntegerTail>
+17. <IntegerTail> -> digit <IntegerTail> | ε
+18. <Fraction> -> '.' <Integer> | ε
 ```
 *(где ε — пустая цепочка / эпсилон)*
-* `letter` -> 'a' | 'b' | ... | 'z' | 'A' | 'B' | ... | 'Z'
-* `digit` -> '0' | '1' | ... | '9'
-* `any_chars` -> любые допустимые символы внутри строк
 
-Следуя введенному формальному определению грамматики, представим G[<Z>] ее составляющими:
-* **Z** = <Z> (целевой нетерминал, аксиома грамматики)
-* **VT** (множество терминалов) = {a, b, ..., z, A, B, ..., Z, 0, 1, ..., 9, +, -, *, /, =, ++, --, ,, ;, ., (, ), {, }, ", ', $, _, int, double, float, boolean, char, byte, short, long, var, void, String, return, ->, new, const}
-* **VN** (множество нетерминалов) = {\<Z\>, \<LVal\>, \<Lambda\>, \<Params\>, \<ParamList\>, \<ParamListTail\>, \<Param\>, \<Body\>, \<StmtList\>, \<Stmt\>, \<Expr\>, \<ExprTail\>, \<Op\>, \<Term\>, \<MethodCall\>, \<Args\>, \<ArgsTail\>, \<Type\>, \<Identifier\>, \<IdentifierRem\>, \<Number\>, \<Integer\>, \<IntegerTail\>, \<Fraction\>, \<String\>}
-* **P** = { (1), (2), (3), ..., (25) } — множество всех пронумерованных правил вывода, описанных выше.
+### Словари грамматики  $G[\langle Z \rangle]$: ###
+
+**Аксиома:** $\langle Z \rangle$
+
+**Множество нетерминалов ($V_N$):** { $\langle Z \rangle$, $\langle LVal \rangle$, 
+$\langle Lambda \rangle$, $\langle Params \rangle$, $\langle ParamList \rangle$, 
+$\langle ParamListTail \rangle$, $\langle Param \rangle$, $\langle Expr \rangle$, 
+$\langle ExprTail \rangle$, $\langle Op \rangle$, $\langle Term \rangle$, 
+$\langle Type \rangle$, $\langle Identifier \rangle$, $\langle IdentifierRem \rangle$, 
+$\langle Number \rangle$, $\langle Integer \rangle$, $\langle IntegerTail \rangle$, 
+$\langle Fraction \rangle$ }
+
+**Множество терминалов ($V_T$):** { '=', ';', '->', '(', ')', ',', '+', '-', '*', '/', '.', 'int', 'double', 
+'float', 'boolean', 'char', 'byte', 'short', 'long', 'var', 'void', 'String', 'const', letter, digit, '_', '$' }
 
 ---
 
@@ -105,6 +104,7 @@ $A \rightarrow \alpha, A \in V_N, \alpha \in V^*$.
 Для каждого нетерминального символа грамматики (например, `parseLambda`, `parseExpr`, `parseBody`) 
 написана отдельная программная функция. Эти функции рекурсивно вызывают друг друга в процессе разбора 
 токенов по правилам грамматики.
+![img.png](img.png)
 
 ---
 
@@ -127,33 +127,29 @@ $A \rightarrow \alpha, A \in V_N, \alpha \in V^*$.
 ### Пример 1: Корректное выражение (присваивание лямбды)
 **Код:**
 ```java
-Function add = (int a, int b) -> {
-    return a + b;
-};
+Function add = (int a, int b) -> a + b;
 ```
 **Результат:** Лексический и синтаксический анализ прошли успешно. Ошибок нет.
 
-![img.png](img.png)
+![img_1.png](img_1.png)
 
 ### Пример 2: Синтаксическая ошибка (пропущена закрывающая скобка)
 **Код:**
 ```java
-Function add = (int a, int b -> {
-    return a + b;
-};
+Function add = (int a, int b -> a + b;
 ```
-**Результат:** Парсер должен найти ошибку "Ожидалось ')'", после чего восстановиться на токене `->` и продолжить успешно парсить тело выражения `{ return a + b; };`.
+**Результат:** Парсер должен найти ошибку "Ожидалось ')'".
 
-![img_1.png](img_1.png)
+![img_2.png](img_2.png)
 
 ### Пример 3: Отсутствие параметров у лямбды
 **Код:**
 ```java
-var obj = -> System.out.println("Hello");
+Function add = () -> a + b;
 ```
-**Результат:** Будет сообщено, что "Ожидались параметры лямбда-выражения" (ожидались `()`, `( ... )` или идентификатор). Восстановление после ошибки произойдет на токене `->`. 
+**Результат:** Будет сообщено, что "Переменная 'a' не объявлена" и "Переменная 'b' не объявлена". 
 
-![img_2.png](img_2.png)
+![img_4.png](img_4.png)
 
 ### Пример 4: Использование лексически неверного символа
 **Код:**
