@@ -69,6 +69,8 @@
 16. <Integer> -> digit <IntegerTail>
 17. <IntegerTail> -> digit <IntegerTail> | ε
 18. <Fraction> -> '.' <Integer> | ε
+19. digit -> '0' | ... | '9'
+20. letter -> 'a' | ... |'z' | 'A' | ... | 'Z'
 ```
 *(где ε — пустая цепочка / эпсилон)*
 
@@ -84,8 +86,7 @@ $\langle Type \rangle$, $\langle Identifier \rangle$, $\langle IdentifierRem \ra
 $\langle Number \rangle$, $\langle Integer \rangle$, $\langle IntegerTail \rangle$, 
 $\langle Fraction \rangle$ }
 
-**Множество терминалов ($V_T$):** { '=', ';', '->', '(', ')', ',', '+', '-', '*', '/', '.', 'int', 'double', 
-'float', 'boolean', 'char', 'byte', 'short', 'long', 'var', 'void', 'String', 'const', letter, digit, '_', '$' }
+**Множество терминалов ($V_T$):** { =, ;, ->, (, ), ,, +, -, *, /, ., _, $, 0, ..., 9, a, ..., z, A, ..., Z }
 
 ---
 
