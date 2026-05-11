@@ -11,6 +11,10 @@ public class Parser {
     private final List<Token> tokens;
     private int pos;
     private final List<SyntaxError> errors;
+    private boolean panicMode = false;
+
+
+    private final Set<String> declaredVariables = new HashSet<>();
 
     public Parser(List<Token> allTokens) {
         this.tokens = new ArrayList<>();
@@ -28,13 +32,13 @@ public class Parser {
     public static List<SyntaxError> parse(List<Token> tokens) {
         Parser parser = new Parser(tokens);
         parser.parseZ();
-        
+
         List<SyntaxError> mergedErrors = new ArrayList<>();
         if (!parser.errors.isEmpty()) {
             SyntaxError prev = parser.errors.get(0);
             for (int i = 1; i < parser.errors.size(); i++) {
                 SyntaxError curr = parser.errors.get(i);
-                
+
                 boolean hasTokensBetween = false;
                 for (Token t : parser.tokens) {
                     if (t.getGlobalStart() > prev.getGlobalEnd() && t.getGlobalEnd() < curr.getGlobalStart()) {
@@ -42,7 +46,7 @@ public class Parser {
                         break;
                     }
                 }
-                
+
                 if (!hasTokensBetween && prev.getDescription().equals(curr.getDescription())) {
                     String newFragment;
                     if (prev.getGlobalEnd() >= curr.getGlobalStart() - 1) {
@@ -62,6 +66,9 @@ public class Parser {
     }
 
     private void addError(String description) {
+        if (panicMode) return;
+        panicMode = true;
+
         if (pos < tokens.size()) {
             Token t = tokens.get(pos);
             errors.add(new SyntaxError(t.getText(), t.getLocation(), description, t.getGlobalStart(), t.getGlobalEnd()));
@@ -76,8 +83,7 @@ public class Parser {
     private void recover(String... follow) {
         Set<String> followSet = new HashSet<>(Arrays.asList(follow));
         followSet.add(";");
-        followSet.add("}");
-        
+
         int tempPos = pos;
         boolean foundSync = false;
         while (tempPos < tokens.size()) {
@@ -104,7 +110,7 @@ public class Parser {
     private boolean match(String expectedText, String... follow) {
         Token c = current();
         if (c != null && c.getText().equals(expectedText)) {
-            advance();
+            consume();
             return true;
         }
         addError("Ожидалось '" + expectedText + "'");
@@ -115,7 +121,7 @@ public class Parser {
     private boolean matchType(int expectedCode, String expectedTypeDesc, String... follow) {
         Token c = current();
         if (c != null && c.getCode() == expectedCode) {
-            advance();
+            consume();
             return true;
         }
         addError("Ожидалось " + expectedTypeDesc);
@@ -129,6 +135,11 @@ public class Parser {
     }
 
     private void advance() {
+        if (pos < tokens.size()) pos++;
+    }
+
+    private void consume() {
+        panicMode = false;
         if (pos < tokens.size()) pos++;
     }
 
@@ -152,7 +163,7 @@ public class Parser {
              if (tokens.get(tempPos).getText().equals("->")) {
                  break;
              }
-             if (tokens.get(tempPos).getText().equals(";") || tokens.get(tempPos).getText().equals("{")) {
+             if (tokens.get(tempPos).getText().equals(";")) {
                  break;
              }
              if (tokens.get(tempPos).getText().equals("=")) {
@@ -164,23 +175,21 @@ public class Parser {
 
         if (hasAssignment) {
             c = current();
-            if (c != null && (c.getCode() == 14 || c.getText().equals("const"))) { 
-                advance();
+            if (c != null && (c.getCode() == 14 || c.getText().equals("const"))) {
+                consume();
                 matchType(2, "идентификатор", "=");
             } else if (c != null && c.getCode() == 2) {
-                advance();
+                consume();
                 if (current() != null && current().getCode() == 2) {
-                    advance();
+                    consume();
                 }
             } else {
                 addError("Ожидалась левая часть присваивания");
                 recover("=");
             }
             match("=", "->", "(");
-        } else {
-            addError("Ожидалось присваивание переменной (отсутствует знак '=')");
         }
-        
+
         c = current();
         if (c == null || c.getText().equals(";")) {
             if (hasAssignment) {
@@ -189,17 +198,19 @@ public class Parser {
         } else {
             parseLambda();
         }
-        
+
         if (!isEOF() && !current().getText().equals(";")) {
+             panicMode = false;
              while(!isEOF() && !current().getText().equals(";")) {
                  addError("Ожидался конец выражения, найдены лишние символы");
                  advance();
              }
         }
-        
+
         match(";", "EOF");
-        
+
         if (!isEOF()) {
+             panicMode = false;
              while(!isEOF()) {
                  addError("Ожидался конец выражения, найдены лишние символы");
                  advance();
@@ -209,8 +220,8 @@ public class Parser {
 
     private void parseLambda() {
         parseParams("->");
-        match("->", "{", "return");
-        parseBody("");
+        match("->", ";");
+        parseExpr(";", "EOF");
     }
 
     private void parseParams(String... follow) {
@@ -219,16 +230,18 @@ public class Parser {
             addError("Ожидались параметры лямбда-выражения");
             return;
         }
-        
+
         if (c.getText().equals("(")) {
-            advance();
+            consume();
             c = current();
             if (c != null && !c.getText().equals(")")) {
                 parseParamList(")");
             }
             match(")", "->");
-        } else if (c.getCode() == 2) { 
-            advance();
+        } else if (c.getCode() == 2) {
+            // Запоминаем параметр (если он один без скобок)
+            declaredVariables.add(c.getText());
+            consume();
         } else {
             addError("Ожидались параметры лямбда-выражения");
             recover(follow);
@@ -237,14 +250,14 @@ public class Parser {
 
     private void parseParamList(String... follow) {
         parseParam(",", ")");
-        parseParamListTail(")");
+        parseParamListTail();
     }
 
-    private void parseParamListTail(String... follow) {
+    private void parseParamListTail() {
         while (!isEOF()) {
             Token c = current();
             if (c != null && c.getText().equals(",")) {
-                advance();
+                consume();
                 parseParam(",", ")");
             } else {
                 break;
@@ -257,80 +270,35 @@ public class Parser {
         if (c == null) return;
 
         if (c.getCode() == 14) {
-            advance();
-            matchType(2, "идентификатор параметра", follow);
+            consume(); // Съедаем тип
+            Token idToken = current(); // Смотрим на следующий токен (идентификатор)
+            if (matchType(2, "идентификатор параметра", follow)) {
+                if (idToken != null) {
+                    declaredVariables.add(idToken.getText()); // Запоминаем переменную
+                }
+            }
         } else if (c.getCode() == 2) {
-            advance();
+            declaredVariables.add(c.getText()); // Запоминаем переменную
+            consume();
         } else {
             addError("Ожидался параметр (идентификатор или тип с идентификатором)");
             recover(follow);
         }
     }
 
-    private void parseBody(String... follow) {
-        Token c = current();
-        if (c == null) {
-            addError("Ожидалось тело лямбда-выражения");
-            return;
-        }
-
-        if (c.getText().equals("{")) {
-            advance();
-            parseStmtList("}");
-            match("}", follow);
-        } else if (c.getText().equals(";")) {
-            addError("Ожидалось тело лямбда-выражения");
-        } else {
-            parseExpr(";", "EOF");
-        }
-    }
-
-    private void parseStmtList(String... follow) {
-        while (!isEOF()) {
-            Token c = current();
-            if (c != null && c.getText().equals("}")) {
-                break;
-            }
-            parseStmt("}", ";", "return");
-        }
-    }
-
-    private void parseStmt(String... follow) {
-        Token c = current();
-        if (c == null) return;
-
-        if (c.getText().equals("return")) {
-            advance();
-            parseExpr(";");
-            match(";", "}", "return");
-        } else if (c.getCode() == 14) { 
-            advance(); 
-            matchType(2, "идентификатор переменной", "=", ";");
-            if (current() != null && current().getText().equals("=")) {
-                advance();
-                parseExpr(";");
-            }
-            match(";", "}", "return");
-        } else {
-            parseExpr(";");
-            match(";", "}", "return");
-        }
-    }
-
     private void parseExpr(String... follow) {
-        List<String> termFollows = new ArrayList<>(Arrays.asList("+", "-", "*", "/", "="));
+        List<String> termFollows = new ArrayList<>(Arrays.asList("+", "-", "*", "/"));
         termFollows.addAll(Arrays.asList(follow));
         parseTerm(termFollows.toArray(new String[0]));
-        parseExprTail(follow);
+        parseExprTail();
     }
 
-    private void parseExprTail(String... follow) {
+    private void parseExprTail() {
         while (!isEOF()) {
             Token c = current();
             if (c != null && isOp(c.getText())) {
-                advance();
-                List<String> termFollows = new ArrayList<>(Arrays.asList("+", "-", "*", "/", "="));
-                termFollows.addAll(Arrays.asList(follow));
+                consume();
+                List<String> termFollows = new ArrayList<>(Arrays.asList("+", "-", "*", "/", ";", ")"));
                 parseTerm(termFollows.toArray(new String[0]));
             } else {
                 break;
@@ -339,42 +307,25 @@ public class Parser {
     }
 
     private boolean isOp(String text) {
-        return Arrays.asList("+", "-", "*", "/", "=").contains(text);
+        return Arrays.asList("+", "-", "*", "/").contains(text);
     }
 
     private void parseTerm(String... follow) {
         Token c = current();
         if (c == null) {
-            addError("Ожидался операнд (идентификатор, число, строка или выражение в скобках)");
+            addError("Ожидался операнд (идентификатор, число или выражение в скобках)");
             return;
         }
 
         if (c.getCode() == 2) {
-            advance();
-            c = current();
-            if (c != null && c.getText().equals(".")) {
-                while (c != null && c.getText().equals(".")) {
-                    advance();
-                    matchType(2, "идентификатор атрибута/метода", "(", ";", ")");
-                    c = current();
-                }
-                c = current();
-                if (c != null && c.getText().equals("(")) {
-                    advance();
-                    parseArgs(")");
-                    match(")", follow);
-                }
-            } else if (c != null && c.getText().equals("(")) {
-                advance();
-                parseArgs(")");
-                match(")", follow);
+            if (!declaredVariables.contains(c.getText())) {
+                addError("Переменная '" + c.getText() + "' не объявлена");
             }
-        } else if (c.getCode() == 1 || c.getCode() == 6) { 
-            advance();
-        } else if (c.getCode() == 5) {
-            advance();
+            consume();
+        } else if (c.getCode() == 1 || c.getCode() == 6) {
+            consume();
         } else if (c.getText().equals("(")) {
-            advance();
+            consume();
             parseExpr(")");
             match(")", follow);
         } else if (c.getText().equals(".")) {
@@ -382,32 +333,12 @@ public class Parser {
             if (next != null && next.getCode() == 1) {
                 addError("Ожидалась цифра перед десятичной точкой");
             } else {
-                addError("Ожидался операнд (идентификатор, число, строка или выражение в скобках)");
+                addError("Ожидался операнд (идентификатор, число или выражение в скобках)");
             }
             advance();
         } else {
-            addError("Ожидался операнд (идентификатор, число, строка или выражение в скобках)");
+            addError("Ожидался операнд (идентификатор, число или выражение в скобках)");
             recover(follow);
-        }
-    }
-
-    private void parseArgs(String... follow) {
-        Token c = current();
-        if (c == null || c.getText().equals(")")) return;
-        
-        parseExpr(",", ")");
-        parseArgsTail(")");
-    }
-
-    private void parseArgsTail(String... follow) {
-        while (!isEOF()) {
-            Token c = current();
-            if (c != null && c.getText().equals(",")) {
-                advance();
-                parseExpr(",", ")");
-            } else {
-                break;
-            }
         }
     }
 }
